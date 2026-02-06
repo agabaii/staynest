@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int            @id @default(autoincrement())
+  email            String         @unique
+  name             String?
+  password         String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  isVerified       Boolean        @default(false)
+  resetCode        String?
+  verificationCode String?
+  phone            String
+  avatar           String?
+  lastSeen         DateTime       @default(now())
+  bookings         Booking[]      @relation("UserBookings")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  sentMessages     Message[]      @relation("SentMessages")
+  notifications    Notification[]
+  properties       Property[]
+  favorites        Favorite[]
+  reviews          Review[]
+  reportsMade      Report[]      @relation("Reporter")
+  reportsReceived  Report[]      @relation("ReportedUser")
+  role             String         @default("USER")
+  isBanned         Boolean        @default(false)
+}
+
+model Property {
+  id           Int       @id @default(autoincrement())
+  title        String
+  description  String
+  price        Float
+  images       String[]
+  authorId     Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  city         String
+  country      String
+  district     String?
+  propertyType String    @default("Apartment")
+  rentType     String    @default("DAILY")
+  amenities    String[]
+  latitude     Float?
+  longitude    Float?
+  area         Float?
+  bathrooms    Int       @default(1)
+  bedrooms     Int       @default(1)
+  guests       Int       @default(2)
+  bookings     Booking[]
+  messages     Message[]
+  calendar     PropertyCalendar[]
+  author       User      @relation(fields: [authorId], references: [id])
+  favoritedBy  Favorite[]
+  reviews      Review[]
+  status       String    @default("APPROVED") // PENDING, APPROVED, REJECTED
+  reports      Report[]
+}
+
+model Message {
+  id         Int       @id @default(autoincrement())
+  content    String
+  senderId   Int
+  receiverId Int
+  propertyId Int?
+  createdAt  DateTime  @default(now())
+  isRead     Boolean   @default(false)
+  property   Property? @relation(fields: [propertyId], references: [id])
+  receiver   User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender     User      @relation("SentMessages", fields: [senderId], references: [id])
+}
+
+model Booking {
+  id         Int      @id @default(autoincrement())
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("PENDING")
+  totalPrice Float
+  renterId   Int
+  propertyId Int
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id])
+  renter     User     @relation("UserBookings", fields: [renterId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  content   String
+  type      String
+  isRead    Boolean  @default(false)
+  userId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PropertyCalendar {
+  id         Int      @id @default(autoincrement())
+  propertyId Int
+  date       DateTime
+  price      Float?   // Кастомная цена на этот день
+  isBlocked  Boolean  @default(false)
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@unique([propertyId, date])
+}
+
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  propertyId Int
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@unique([userId, propertyId])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int      // 1-5 звезд
+  comment    String
+  photos     String[] // Фото от гостя
+  userId     Int
+  propertyId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@unique([userId, propertyId]) // Один отзыв от пользователя на объявление
+}
+
+model Report {
+  id          Int      @id @default(autoincrement())
+  reason      String
+  details     String?
+  status      String   @default("PENDING") // PENDING, RESOLVED
+  createdAt   DateTime @default(now())
+  
+  reporterId  Int
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
+  
+  propertyId  Int?
+  property    Property? @relation(fields: [propertyId], references: [id])
+  
+  userId      Int?      // Reporting a user directly
+  user        User?     @relation("ReportedUser", fields: [userId], references: [id])
+}

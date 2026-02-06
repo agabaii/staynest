@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StayNest Admin | Premium Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div id="login-screen" class="screen active">
+        <div class="glass-card login-card animate-fade-in">
+            <div class="logo">
+                <i class="fas fa-shield-halved"></i>
+                <span>StayNest<span>Admin</span></span>
+            </div>
+            <h2>Вход в панель управления</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" placeholder="Email" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Пароль" required>
+                </div>
+                <button type="submit" id="login-btn">
+                    <span>Войти</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            <div id="login-error" class="error-msg"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="screen">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>StayNest</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="stats">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Обзор</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="users">
+                    <i class="fas fa-users"></i>
+                    <span>Пользователи</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="properties">
+                    <i class="fas fa-house-user"></i>
+                    <span>Объявления</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="bookings">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Бронирования</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="reports">
+                    <i class="fas fa-flag"></i>
+                    <span>Жалобы</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Поиск...">
+                </div>
+                <div class="user-profile">
+                    <span id="admin-name">Administrator</span>
+                    <div class="avatar">A</div>
+                </div>
+            </header>
+
+            <div class="tab-content active" id="stats-tab">
+                <h1 class="page-title">Аналитика системы</h1>
+                <div class="stats-grid">
+                    <div class="stat-card glass-card">
+                        <div class="icon-box blue"><i class="fas fa-users"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-users-count">0</h3>
+                            <p>Пользователей</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="icon-box green"><i class="fas fa-home"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-props-count">0</h3>
+                            <p>Объектов</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="icon-box orange"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-reports-count">0</h3>
+                            <p>Активных жалоб</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="icon-box purple"><i class="fas fa-wallet"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-revenue">0 ₸</h3>
+                            <p>Общий доход</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container glass-card mt-30">
+                    <h3>Динамика выручки (CONFIRMED)</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <div class="tab-content" id="bookings-tab">
+                <h1 class="page-title">История бронирований</h1>
+                <div class="glass-card table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Объект</th>
+                                <th>Арендатор</th>
+                                <th>Даты</th>
+                                <th>Цена</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookings-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="users-tab">
+                <h1 class="page-title">Управление пользователями</h1>
+                <div class="glass-card table-container">
+                    <table id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Пользователь</th>
+                                <th>Email/Телефон</th>
+                                <th>Роль</th>
+                                <th>Объявления/Брони</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="properties-tab">
+                <h1 class="page-title">Модерация объявлений</h1>
+                <div class="glass-card table-container">
+                    <table id="props-table">
+                        <thead>
+                            <tr>
+                                <th>Объект</th>
+                                <th>Автор</th>
+                                <th>Цена</th>
+                                <th>Тип</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="props-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="reports-tab">
+                <h1 class="page-title">Жалобы пользователей</h1>
+                <div class="glass-card table-container">
+                    <table id="reports-table">
+                        <thead>
+                            <tr>
+                                <th>Причина</th>
+                                <th>Объект/Пользователь</th>
+                                <th>От кого</th>
+                                <th>Дата</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-list">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

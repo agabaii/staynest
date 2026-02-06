@@ -1,0 +1,23 @@
+{
+  "name": "staynest-backend",
+  "version": "1.0.0",
+  "description": "Backend for StayNest App",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "migrate": "npx prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "prisma": "^5.0.0"
+  }
+}
