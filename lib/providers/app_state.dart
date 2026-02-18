@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -7,6 +8,9 @@ import '../models/booking.dart';
 import '../services/property_service.dart';
 import '../services/auth_service.dart';
 import '../config/api_config.dart';
+import 'package:provider/provider.dart';
+import '../main.dart' as import_main;
+import '../pages/login_page.dart';
 
 class AppState extends ChangeNotifier {
   final PropertyService _propertyService = PropertyService();
@@ -39,6 +43,16 @@ class AppState extends ChangeNotifier {
   AppState() {
     _loadUser();
     fetchProperties();
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    // Обновляем ленту раз в минуту для актуальности (скрытие забаненных и т.д.)
+    Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (!_isLoading) {
+        fetchProperties();
+      }
+    });
   }
 
   String get filterRentType => _filterRentType;
@@ -199,6 +213,8 @@ class AppState extends ChangeNotifier {
       if (response.statusCode == 200) {
         final List<dynamic> ids = jsonDecode(response.body);
         return ids.cast<int>();
+      } else {
+        checkForbiddenResponse(response);
       }
     } catch (e) {
       print('Error fetching favorites: $e');
@@ -300,6 +316,8 @@ class AppState extends ChangeNotifier {
         if (_userAvatar != null) await prefs.setString('user_avatar', _userAvatar!);
         
         notifyListeners();
+      } else {
+        checkForbiddenResponse(response);
       }
     } catch (e) {
       print('Profile update error: $e');
@@ -325,6 +343,8 @@ class AppState extends ChangeNotifier {
         // Assuming the role doesn't change frequently during session.
         _lastSeen = data['lastSeen'] != null ? DateTime.parse(data['lastSeen']) : null;
         notifyListeners();
+      } else {
+        checkForbiddenResponse(response);
       }
     } catch (e) { print(e); }
   }
@@ -372,9 +392,11 @@ class AppState extends ChangeNotifier {
         ).timeout(const Duration(seconds: 5));
 
         if (response.statusCode != 200) {
-          // Откатываем в случае ошибки сервера
-          _properties[index].isFavorite = oldStatus;
-          notifyListeners();
+          if (!checkForbiddenResponse(response)) {
+            // Откатываем в случае другой ошибки сервера
+            _properties[index].isFavorite = oldStatus;
+            notifyListeners();
+          }
         }
       } catch (e) {
         print('Error toggling favorite: $e');
@@ -396,5 +418,41 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     notifyListeners();
+  }
+
+  /// Статический метод для обработки 403 ошибки из любой точки приложения
+  static void handleGlobalForbidden() {
+    final context = import_main.StayNestApp.navigatorKey.currentContext;
+    if (context != null) {
+      // Провайдер может быть недоступен в статическом контексте без контекста
+      // Но мы можем получить его через navigatorKey
+      try {
+        final state = Provider.of<AppState>(context, listen: false);
+        state.logout();
+      } catch (e) {
+        print('Error calling logout from static: $e');
+      }
+
+      import_main.StayNestApp.navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ваш аккаунт заблокирован или сессия недействительна'),
+          backgroundColor: Colors.red,
+        )
+      );
+    }
+  }
+
+  /// Проверяет статус ответа сервера. Если 403 (забанен), принудительно разлогинивает.
+  bool checkForbiddenResponse(http.Response response) {
+    if (response.statusCode == 403) {
+      handleGlobalForbidden();
+      return true;
+    }
+    return false;
   }
 }

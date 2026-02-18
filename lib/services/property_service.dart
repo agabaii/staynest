@@ -5,6 +5,7 @@ import 'auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../config/api_config.dart';
+import '../providers/app_state.dart' as import_app_state;
 
 class PropertyService {
   static const String baseUrl = '${ApiConfig.baseUrl}/properties';
@@ -88,6 +89,12 @@ class PropertyService {
     if (response.statusCode == 201) {
       return {'success': true, 'data': jsonDecode(response.body)};
     } else {
+      if (response.statusCode == 403) {
+        // Импортируем AppState и вызываем статический метод
+        // В Dart циклические импорты разрешены, но лучше использовать navigatorKey или коллбэк
+        // Но мы уже подготовили статический метод
+        import_app_state.AppState.handleGlobalForbidden();
+      }
       String message = 'Ошибка при создании объявления';
       try {
         final errorData = jsonDecode(response.body);

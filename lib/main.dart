@@ -18,11 +18,14 @@ void main() async {
 class StayNestApp extends StatelessWidget {
   const StayNestApp({Key? key}) : super(key: key);
 
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: () => AppState(),
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'StayNest',
         theme: ThemeData(
           useMaterial3: true,

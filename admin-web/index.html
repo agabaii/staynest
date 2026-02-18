@@ -149,7 +149,11 @@
             </div>
 
             <div class="tab-content" id="users-tab">
-                <h1 class="page-title">Управление пользователями</h1>
+                <div class="header-with-action">
+                    <h1 class="page-title">Управление пользователями</h1>
+                    <button class="action-btn approve" onclick="openAddUserModal()"><i class="fas fa-plus"></i>
+                        Добавить</button>
+                </div>
                 <div class="glass-card table-container">
                     <table id="users-table">
                         <thead>
@@ -166,6 +170,71 @@
                             <!-- JS populated -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Add User Modal -->
+            <div id="add-user-modal" class="modal">
+                <div class="glass-card modal-content">
+                    <div class="modal-header">
+                        <h3>Добавить пользователя</h3>
+                        <span class="close-modal" onclick="closeModals()">&times;</span>
+                    </div>
+                    <form id="add-user-form">
+                        <div class="input-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="add-user-name" placeholder="Имя" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="add-user-email" placeholder="Email" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-phone"></i>
+                            <input type="text" id="add-user-phone" placeholder="Телефон" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="add-user-password" placeholder="Пароль" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-user-tag"></i>
+                            <select id="add-user-role" required>
+                                <option value="USER">Пользователь</option>
+                                <option value="ADMIN">Администратор</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="save-btn">Создать пользователя</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit User Modal -->
+            <div id="edit-user-modal" class="modal">
+                <div class="glass-card modal-content">
+                    <div class="modal-header">
+                        <h3>Редактировать пользователя</h3>
+                        <span class="close-modal" onclick="closeModals()">&times;</span>
+                    </div>
+                    <form id="edit-user-form">
+                        <input type="hidden" id="edit-user-id">
+                        <div class="input-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="edit-user-name" placeholder="Имя" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="edit-user-email" placeholder="Email" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-user-tag"></i>
+                            <select id="edit-user-role" required>
+                                <option value="USER">Пользователь</option>
+                                <option value="ADMIN">Администратор</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="save-btn">Сохранить изменения</button>
+                    </form>
                 </div>
             </div>
 
@@ -187,6 +256,41 @@
                             <!-- JS populated -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Edit Property Modal -->
+            <div id="edit-prop-modal" class="modal">
+                <div class="glass-card modal-content">
+                    <div class="modal-header">
+                        <h3>Редактировать объявление</h3>
+                        <span class="close-modal" onclick="closeModals()">&times;</span>
+                    </div>
+                    <form id="edit-prop-form">
+                        <input type="hidden" id="edit-prop-id">
+                        <div class="input-group">
+                            <i class="fas fa-heading"></i>
+                            <input type="text" id="edit-prop-title" placeholder="Заголовок" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-coins"></i>
+                            <input type="number" id="edit-prop-price" placeholder="Цена" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-info-circle"></i>
+                            <textarea id="edit-prop-desc" placeholder="Описание"
+                                style="width:100%; height:100px; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:12px; color:white; padding:10px;"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-check-circle"></i>
+                            <select id="edit-prop-status">
+                                <option value="PENDING">На проверке</option>
+                                <option value="APPROVED">Опубликовано</option>
+                                <option value="REJECTED">Отклонено</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="save-btn">Обновить объявление</button>
+                    </form>
                 </div>
             </div>
 

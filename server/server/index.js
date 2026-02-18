@@ -76,6 +76,16 @@ const authenticate = async (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.userId = decoded.userId;
 
+        // Проверяем, не забанен ли пользователь
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId },
+            select: { isBanned: true }
+        });
+
+        if (!user || user.isBanned) {
+            return res.status(403).json({ message: 'Доступ заблокирован или пользователь удален' });
+        }
+
         // Обновляем время последнего визита (фоново)
         prisma.user.update({
             where: { id: req.userId },
@@ -635,9 +645,12 @@ app.get('/api/properties', async (req, res) => {
         const { minPrice, maxPrice, type, amenities, sort, status } = req.query;
 
         const where = {
-            // Показываем только одобренные, если не запрошено конкретно иное (например для лк)
-            // Но публичный API должен отдавать только APPROVED
-            status: 'APPROVED'
+            // Показываем только одобренные
+            status: 'APPROVED',
+            // И только от НЕ забаненных авторов
+            author: {
+                isBanned: false
+            }
         };
 
         if (minPrice) where.price = { ...where.price, gte: parseFloat(minPrice) };
@@ -862,6 +875,49 @@ app.post('/api/admin/users/:id/toggle-ban', authenticate, isAdmin, async (req, r
     }
 });
 
+// Обновить данные пользователя (для админа)
+app.put('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { name, email, role } = req.body;
+
+        if (!userId) return res.status(400).json({ message: 'Некорректный ID пользователя' });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                name: name || undefined,
+                email: email || undefined,
+                role: role || undefined
+            }
+        });
+
+        res.json(updatedUser);
+    } catch (e) {
+        console.error('Update user error:', e);
+        if (e.code === 'P2002') return res.status(400).json({ message: 'Этот Email уже занят' });
+        res.status(500).json({ message: 'Ошибка обновления пользователя' });
+    }
+});
+
+// Удалить пользователя (для админа)
+app.delete('/api/admin/users/:id', authenticate, isAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (userId === req.userId) return res.status(400).json({ message: 'Нельзя удалить самого себя' });
+
+        await prisma.favorite.deleteMany({ where: { userId } });
+        await prisma.booking.deleteMany({ where: { renterId: userId } });
+        await prisma.report.deleteMany({ where: { OR: [{ reporterId: userId }, { userId }] } });
+
+        await prisma.user.delete({ where: { id: userId } });
+        res.json({ message: 'Пользователь удален' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Ошибка при удалении' });
+    }
+});
+
 // Получить все объявления (для админа)
 app.get('/api/admin/properties', authenticate, isAdmin, async (req, res) => {
     try {
@@ -895,6 +951,32 @@ app.put('/api/admin/properties/:id/status', authenticate, isAdmin, async (req, r
         res.json(property);
     } catch (e) {
         res.status(500).json({ message: 'Ошибка обновления статуса' });
+    }
+});
+
+// Обновить данные объявления (для админа)
+app.put('/api/admin/properties/:id', authenticate, isAdmin, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { title, price, description, status } = req.body;
+
+        if (!id) return res.status(400).json({ message: 'Некорректный ID объявления' });
+
+        const property = await prisma.property.update({
+            where: { id },
+            data: {
+                title: title || undefined,
+                price: price !== undefined ? parseFloat(price) : undefined,
+                description: description || undefined,
+                status: status || undefined
+            }
+        });
+
+        console.log(`Property ${id} updated by admin`);
+        res.json(property);
+    } catch (e) {
+        console.error('Update property error:', e);
+        res.status(500).json({ message: 'Ошибка обновления объявления (серверная)' });
     }
 });
 

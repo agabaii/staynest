@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'auth_service.dart';
 import '../models/booking.dart';
 import '../config/api_config.dart';
+import '../providers/app_state.dart' as import_app_state;
 
 class BookingService {
   static const String baseUrl = '${ApiConfig.baseUrl}/bookings';
@@ -18,6 +19,8 @@ class BookingService {
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         return data.map((e) => Booking.fromJson(e)).toList();
+      } else if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
       }
     } catch (e) { print(e); }
     return [];
@@ -31,6 +34,8 @@ class BookingService {
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         return data.map((e) => Booking.fromJson(e)).toList();
+      } else if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
       }
     } catch (e) { print(e); }
     return [];
@@ -50,6 +55,9 @@ class BookingService {
           'totalPrice': price,
         }),
       );
+      if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
+      }
       return response.statusCode == 201;
     } catch (e) { print(e); }
     return false;
@@ -68,6 +76,9 @@ class BookingService {
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({'status': status}),
       );
+      if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
+      }
       print('updateStatus: Response status code: ${response.statusCode}');
       print('updateStatus: Response body: ${response.body}');
       return response.statusCode == 200;

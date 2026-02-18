@@ -1,4 +1,4 @@
-const API_BASE = 'http://172.20.10.5:8001/api';
+const API_BASE = (window.location.protocol.startsWith('http') ? window.location.origin : 'http://localhost:8001') + '/api';
 let token = localStorage.getItem('admin_token');
 
 // Elements
@@ -108,12 +108,32 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     };
     if (body) options.body = JSON.stringify(body);
 
-    const res = await fetch(`${API_BASE}${endpoint}`, options);
-    if (res.status === 401) {
-        logoutBtn.click();
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, options);
+
+        if (res.status === 401 || res.status === 403) {
+            if (res.status === 403 && endpoint !== '/admin/stats') {
+                alert('Доступ заблокирован или недостаточно прав');
+            }
+            localStorage.removeItem('admin_token');
+            token = null;
+            showLogin();
+            return null;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert('Ошибка: ' + (data.message || 'Что-то пошло не так'));
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('API Error:', err);
+        alert('Ошибка соединения с сервером');
         return null;
     }
-    return res.json();
 }
 
 let revenueChart = null;
@@ -171,12 +191,32 @@ async function fetchStats() {
     });
 }
 
+const editUserModal = document.getElementById('edit-user-modal');
+const addUserModal = document.getElementById('add-user-modal');
+const editPropModal = document.getElementById('edit-prop-modal');
+const modals = [editUserModal, addUserModal, editPropModal];
+
+window.closeModals = () => {
+    modals.forEach(m => m.classList.remove('active'));
+};
+
+window.onclick = (event) => {
+    if (modals.includes(event.target)) closeModals();
+};
+
+// --- USERS ---
+
+// --- USERS ---
+
+let currentUsers = [];
+
 async function fetchUsers() {
     const list = document.getElementById('users-list');
     list.innerHTML = '<tr><td colspan="6" style="text-align:center">Загрузка...</td></tr>';
 
     const users = await apiCall('/admin/users');
     if (!users) return;
+    currentUsers = users;
 
     list.innerHTML = users.map(u => `
         <tr>
@@ -186,20 +226,89 @@ async function fetchUsers() {
                     <span>${u.name}</span>
                 </div>
             </td>
-            <td>${u.email}<br><small style="color:var(--text-dim)">${u.phone}</small></td>
+            <td>${u.email}<br><small style="color:var(--text-dim)">${u.phone || 'Нет телефона'}</small></td>
             <td><span class="badge ${u.role === 'ADMIN' ? 'badge-admin' : ''}">${u.role}</span></td>
-            <td>${u._count.properties} / ${u._count.bookings}</td>
+            <td>${u._count ? u._count.properties : 0} / ${u._count ? u._count.bookings : 0}</td>
             <td><span class="badge ${u.isBanned ? 'badge-banned' : 'badge-approved'}">${u.isBanned ? 'Забанен' : 'Активен'}</span></td>
             <td>
+                <button class="action-btn" onclick="openEditUserModal(${u.id})" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
                 ${u.role !== 'ADMIN' ? `
                     <button class="action-btn ${u.isBanned ? 'unban' : 'ban'}" onclick="toggleBan(${u.id})" title="${u.isBanned ? 'Разбанить' : 'Забанить'}">
                         <i class="fas ${u.isBanned ? 'fa-unlock' : 'fa-user-slash'}"></i>
                     </button>
                 ` : ''}
+                <button class="action-btn reject" onclick="deleteUser(${u.id})" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
             </td>
         </tr>
     `).join('');
 }
+
+window.openAddUserModal = () => addUserModal.classList.add('active');
+
+document.getElementById('add-user-form').onsubmit = async (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const body = {
+        name: document.getElementById('add-user-name').value,
+        email: document.getElementById('add-user-email').value,
+        phone: document.getElementById('add-user-phone').value,
+        password: document.getElementById('add-user-password').value,
+        role: document.getElementById('add-user-role').value
+    };
+
+    console.log('Adding user:', body);
+    const res = await apiCall('/auth/register', 'POST', body);
+    if (res) {
+        closeModals();
+        fetchUsers();
+        document.getElementById('add-user-form').reset();
+    }
+};
+
+window.openEditUserModal = (id) => {
+    const user = currentUsers.find(u => u.id === id);
+    if (!user) return;
+    document.getElementById('edit-user-id').value = user.id;
+    document.getElementById('edit-user-name').value = user.name;
+    document.getElementById('edit-user-email').value = user.email;
+    document.getElementById('edit-user-role').value = user.role;
+    editUserModal.classList.add('active');
+};
+
+document.getElementById('edit-user-form').onsubmit = async (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const id = document.getElementById('edit-user-id').value;
+    const body = {
+        name: document.getElementById('edit-user-name').value,
+        email: document.getElementById('edit-user-email').value,
+        role: document.getElementById('edit-user-role').value
+    };
+
+    console.log('Updating user:', id, body);
+    const res = await apiCall(`/admin/users/${id}`, 'PUT', body);
+    if (res) {
+        closeModals();
+        fetchUsers();
+    }
+};
+
+window.deleteUser = async (id) => {
+    if (confirm('Вы уверены, что хотите удалить этого пользователя? Это действие необратимо.')) {
+        await apiCall(`/admin/users/${id}`, 'DELETE');
+        fetchUsers();
+    }
+};
+
+// --- PROPERTIES ---
+
+let currentProps = [];
 
 async function fetchProperties() {
     const list = document.getElementById('props-list');
@@ -207,21 +316,57 @@ async function fetchProperties() {
 
     const props = await apiCall('/admin/properties');
     if (!props) return;
+    currentProps = props;
 
     list.innerHTML = props.map(p => `
         <tr>
             <td><strong style="display:block">${p.title}</strong><small style="color:var(--text-dim)">${p.city}, ${p.country}</small></td>
-            <td>${p.author.name}</td>
+            <td>${p.author ? p.author.name : 'Удален'}</td>
             <td>${p.price.toLocaleString()}₸</td>
             <td>${p.propertyType}</td>
             <td><span class="badge badge-${p.status.toLowerCase()}">${p.status}</span></td>
             <td>
+                <button class="action-btn" onclick="openEditPropModal(${p.id})" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
                 <button class="action-btn approve" onclick="updatePropStatus(${p.id}, 'APPROVED')" title="Одобрить"><i class="fas fa-check"></i></button>
                 <button class="action-btn reject" onclick="updatePropStatus(${p.id}, 'REJECTED')" title="Отклонить"><i class="fas fa-times"></i></button>
+                <button class="action-btn reject" onclick="deleteProperty(${p.id})" title="Удалить"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
 }
+
+window.openEditPropModal = (id) => {
+    const p = currentProps.find(item => item.id === id);
+    if (!p) return;
+    document.getElementById('edit-prop-id').value = p.id;
+    document.getElementById('edit-prop-title').value = p.title;
+    document.getElementById('edit-prop-price').value = p.price;
+    document.getElementById('edit-prop-desc').value = p.description || '';
+    document.getElementById('edit-prop-status').value = p.status;
+    editPropModal.classList.add('active');
+};
+
+document.getElementById('edit-prop-form').onsubmit = async (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const id = document.getElementById('edit-prop-id').value;
+    const body = {
+        title: document.getElementById('edit-prop-title').value,
+        price: Number(document.getElementById('edit-prop-price').value),
+        description: document.getElementById('edit-prop-desc').value,
+        status: document.getElementById('edit-prop-status').value
+    };
+
+    console.log('Updating property:', id, body);
+    const res = await apiCall(`/admin/properties/${id}`, 'PUT', body);
+    if (res) {
+        closeModals();
+        fetchProperties();
+    }
+};
 
 async function fetchBookings() {
     const list = document.getElementById('bookings-list');

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import '../models/message.dart';
 import '../config/api_config.dart';
+import '../providers/app_state.dart' as import_app_state;
 
 class MessageService {
   static const String baseUrl = '${ApiConfig.baseUrl}/messages';
@@ -21,6 +22,8 @@ class MessageService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => ChatPreview.fromJson(json)).toList();
+      } else if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
       }
     } catch (e) {
       print('Error fetching chats: $e');
@@ -41,6 +44,8 @@ class MessageService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => ChatMessage.fromJson(json)).toList();
+      } else if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
       }
     } catch (e) {
       print('Error fetching messages: $e');
@@ -68,6 +73,8 @@ class MessageService {
 
       if (response.statusCode == 201) {
         return ChatMessage.fromJson(jsonDecode(response.body));
+      } else if (response.statusCode == 403) {
+        import_app_state.AppState.handleGlobalForbidden();
       }
     } catch (e) {
       print('Error sending message: $e');
